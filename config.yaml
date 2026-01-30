@@ -1,0 +1,27 @@
+# Quinn Memory System Configuration
+
+database:
+  path: ./data/quinn_memory.db
+
+vector:
+  path: ./data/chroma
+  collection: quinn_memories
+  # embedding model: ChromaDB default (all-MiniLM-L6-v2)
+
+analysis:
+  model: claude-haiku-4-5  # cheap model for post-session analysis
+  memory_window: 200       # recent memories to consider
+  
+context:
+  ttl_days: 7              # prepared context expiry
+  max_open_loops: 5        # top N open loops to surface
+  max_memories: 10         # selected memories per context
+
+consolidation:
+  decay_rate: 0.95         # daily decay multiplier for importance
+  consolidate_after_days: 7
+  min_importance: 0.1      # below this, archive
+
+service:
+  host: 127.0.0.1
+  port: 8420
