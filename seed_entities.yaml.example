@@ -1,0 +1,24 @@
+# Cortex Memory — Seed Entities
+# Copy this to seed_entities.yaml and customize for your setup.
+# These entities are loaded on first run (cortex init).
+
+entities:
+  - name: "Jane Doe"
+    type: person
+    summary: "Primary user. Software engineer."
+    metadata:
+      email: "jane@example.com"
+      role: "user"
+
+  - name: "Acme Corp"
+    type: organization
+    summary: "Jane's company."
+    metadata: {}
+
+  - name: "Project Alpha"
+    type: project
+    summary: "Main project — a web app for task management."
+    metadata:
+      tech: "React, Node.js, PostgreSQL"
+
+# Entity types: person, project, organization, tool, place, concept

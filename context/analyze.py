@@ -21,8 +21,8 @@ from db.store import (
 from vector.embeddings import search as vec_search
 
 # Analysis prompt template
-ANALYSIS_PROMPT = """You are analyzing a conversation between Quinn (an AI assistant) and Gerry (the user).
-Your job is to produce a structured context summary that will be injected into Quinn's system prompt at the start of the next session.
+ANALYSIS_PROMPT = """You are analyzing a conversation between an AI assistant and a user.
+Your job is to produce a structured context summary that will be injected into the assistant's system prompt at the start of the next session.
 
 ## Recent Conversation
 {conversation}
@@ -55,7 +55,7 @@ Produce a JSON response with exactly this structure:
   "priority_topics": "top 3-5 most important topics right now"
 }}
 
-Be concise. Focus on what Quinn needs to know to be immediately useful in the next session.
+Be concise. Focus on what the assistant needs to know to be immediately useful in the next session.
 Only include open loops that are genuinely unfinished — not things that were resolved.
 Select 3-8 memories that are most relevant for continuity."""
 
