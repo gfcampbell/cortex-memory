@@ -101,6 +101,24 @@ def archive_memory(memory_id, consolidated_into=None):
     conn.close()
 
 
+def delete_memory(memory_id):
+    """Permanently delete a memory by ID."""
+    conn = get_db()
+    conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+    conn.commit()
+    conn.close()
+
+
+def delete_memories_by_content(content_prefix):
+    """Delete memories where content starts with a prefix. Useful for cleanup."""
+    conn = get_db()
+    cursor = conn.execute("DELETE FROM memories WHERE content LIKE ?", (f"{content_prefix}%",))
+    deleted_count = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return deleted_count
+
+
 # --- Entities ---
 
 def add_entity(name, entity_type="person", summary=None, metadata=None):
@@ -152,6 +170,15 @@ def list_entities(entity_type=None):
     return [dict(r) for r in rows]
 
 
+def delete_entity(entity_id):
+    """Permanently delete an entity by ID."""
+    conn = get_db()
+    conn.execute("DELETE FROM entity_mentions WHERE entity_id = ?", (entity_id,))
+    conn.execute("DELETE FROM entities WHERE id = ?", (entity_id,))
+    conn.commit()
+    conn.close()
+
+
 # --- Open Loops ---
 
 def add_open_loop(summary, priority="medium", follow_up_question=None, source_memory_id=None, metadata=None):
@@ -180,6 +207,14 @@ def get_open_loops(limit=10):
 def resolve_loop(loop_id):
     conn = get_db()
     conn.execute("UPDATE open_loops SET resolved_at = CURRENT_TIMESTAMP WHERE id = ?", (loop_id,))
+    conn.commit()
+    conn.close()
+
+
+def delete_loop(loop_id):
+    """Permanently delete an open loop."""
+    conn = get_db()
+    conn.execute("DELETE FROM open_loops WHERE id = ?", (loop_id,))
     conn.commit()
     conn.close()
 
