@@ -142,14 +142,18 @@ cortex stats
 | GET | `/` | Service status |
 | GET | `/stats` | Memory statistics |
 | POST | `/memory` | Store a new memory |
+| DELETE | `/memory/{id}` | Delete a memory by ID |
+| DELETE | `/memory/search/{prefix}` | Batch delete by content prefix |
 | POST | `/search` | Semantic search |
 | GET | `/context` | Get prepared context for injection |
 | POST | `/analyze` | Run post-session analysis |
 | GET | `/loops` | List open loops |
 | POST | `/loops` | Create an open loop |
 | POST | `/loops/{id}/resolve` | Resolve an open loop |
+| DELETE | `/loops/{id}` | Delete an open loop |
 | GET | `/entities` | List known entities |
 | POST | `/entity` | Add/update an entity |
+| DELETE | `/entity/{id}` | Delete an entity |
 | GET | `/recent` | Recent memories |
 | POST | `/ingest` | Ingest a full conversation |
 | POST | `/decay` | Apply importance decay |
@@ -166,6 +170,16 @@ curl -X POST http://127.0.0.1:8420/memory \
 
 ```bash
 curl http://127.0.0.1:8420/context
+```
+
+### Example: Delete memories
+
+```bash
+# Delete a single memory by ID
+curl -X DELETE http://127.0.0.1:8420/memory/550e8400-e29b-41d4-a716-446655440000
+
+# Batch delete by content prefix (useful for cleanup)
+curl -X DELETE http://127.0.0.1:8420/memory/search/TEST_SESSION
 ```
 
 ## How It Works (The Loop)
