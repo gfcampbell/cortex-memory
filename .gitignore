@@ -1,6 +1,10 @@
 data/
 __pycache__/
 *.pyc
+*.egg-info/
 .env
 logs/
 seed_entities.yaml
+build/
+dist/
+*.egg

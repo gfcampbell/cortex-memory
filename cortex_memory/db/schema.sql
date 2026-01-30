@@ -1,4 +1,4 @@
--- Quinn Memory System Schema
+-- Cortex Memory Schema
 
 CREATE TABLE IF NOT EXISTS memories (
     id TEXT PRIMARY KEY,
@@ -67,7 +67,6 @@ CREATE TABLE IF NOT EXISTS prepared_contexts (
     expires_at TIMESTAMP
 );
 
--- Indexes
 CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(memory_type);
 CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
 CREATE INDEX IF NOT EXISTS idx_memories_importance ON memories(importance);

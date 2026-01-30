@@ -67,69 +67,72 @@ cortex-memory/
 ### 1. Install
 
 ```bash
+pip install cortex-memory[anthropic]
+# or: pip install cortex-memory[openai]
+# or: pip install cortex-memory[all]
+```
+
+Or from source:
+```bash
 git clone https://github.com/gfcampbell/cortex-memory.git
 cd cortex-memory
-pip install -r requirements.txt
+pip install -e ".[all]"
 ```
 
-### 2. Configure
+### 2. Setup
 
 ```bash
-# Set your API key (for post-session analysis)
-echo "ANTHROPIC_API_KEY=sk-your-key-here" > .env
-
-# Optional: seed entities for your setup
-cp seed_entities.yaml.example seed_entities.yaml
-# Edit seed_entities.yaml with your people/projects
+cortex init
 ```
 
-### 3. Initialize
+Interactive wizard walks you through:
+- Choose analysis provider (Anthropic or OpenAI)
+- Enter your API key (stored locally in `~/.cortex/.env`)
+- Configure service port
+- Optionally seed entities (people, projects your AI knows about)
+
+### 3. Start the Service
 
 ```bash
-python cli.py init
+cortex start
+# 🧠 Cortex Memory starting on http://127.0.0.1:8420
 ```
 
-### 4. Start the Service
-
+For persistent background service on macOS:
 ```bash
-python service.py
-# Running at http://127.0.0.1:8420
-```
-
-Or run as a persistent macOS service:
-```bash
-# See docs/launchd.md for launchd setup
+# Copy the launchd plist (see docs/launchd.md)
+launchctl load ~/Library/LaunchAgents/com.cortex.memory.plist
 ```
 
 ## CLI Usage
 
 ```bash
 # Store a memory
-python cli.py remember "User prefers direct communication" --type personality --importance 0.9
+cortex remember "User prefers direct communication" --type personality --importance 0.9
 
 # Semantic search
-python cli.py search "communication preferences"
+cortex search "communication preferences"
 
 # View open loops
-python cli.py loops
+cortex loops
 
 # List known entities
-python cli.py entities
+cortex entities
 
 # Get prepared context for session injection
-python cli.py context
+cortex context
 
 # Run post-session analysis
-python cli.py analyze --text "User: Let's redesign the API..."
+cortex analyze --text "User: Let's redesign the API..."
 
 # Apply memory decay
-python cli.py decay
+cortex decay
 
 # View recent memories
-python cli.py recent
+cortex recent
 
 # System stats
-python cli.py stats
+cortex stats
 ```
 
 ## HTTP API
@@ -251,4 +254,4 @@ MIT — do whatever you want with it.
 
 ## Author
 
-Built by [Gerry Campbell](https://linkedin.com/in/gcampbell) and Quinn 🍀.
+Created by [Gerry Campbell](https://linkedin.com/in/gcampbell) — distilled from a year of building production AI memory systems.
