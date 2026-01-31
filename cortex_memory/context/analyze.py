@@ -159,6 +159,13 @@ def run_analysis(conversation_text, conversation_id=None):
     if not result:
         return None
 
+    # Filter out any loops that are already resolved
+    current_open_loop_summaries = {l["summary"] for l in get_open_loops(100)}
+    result["open_loops"] = [
+        loop for loop in result.get("open_loops", [])
+        if loop.get("summary") in current_open_loop_summaries
+    ]
+
     prepared_prompt = build_prepared_prompt(result)
 
     if not conversation_id:
