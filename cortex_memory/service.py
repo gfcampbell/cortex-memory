@@ -190,5 +190,27 @@ def analyze(req: AnalyzeRequest):
     return result
 
 @app.post("/decay")
-def decay(rate: float = 0.95, min_importance: float = 0.1):
-    return apply_decay(rate, min_importance)
+def decay(rate: float = 0.95, min_importance: float = 0.1, dry_run: bool = False):
+    return apply_decay(rate, min_importance, dry_run=dry_run)
+
+
+@app.post("/memory/{memory_id}/protect")
+def protect_memory(memory_id: str):
+    """Mark a memory as protected from decay."""
+    from cortex_memory.db.store import get_memory, set_memory_protected
+    mem = get_memory(memory_id)
+    if not mem:
+        raise HTTPException(status_code=404, detail=f"Memory {memory_id} not found")
+    set_memory_protected(memory_id, True)
+    return {"id": memory_id, "protected": True}
+
+
+@app.delete("/memory/{memory_id}/protect")
+def unprotect_memory(memory_id: str):
+    """Remove decay protection from a memory."""
+    from cortex_memory.db.store import get_memory, set_memory_protected
+    mem = get_memory(memory_id)
+    if not mem:
+        raise HTTPException(status_code=404, detail=f"Memory {memory_id} not found")
+    set_memory_protected(memory_id, False)
+    return {"id": memory_id, "protected": False}

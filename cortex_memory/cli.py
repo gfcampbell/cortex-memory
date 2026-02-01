@@ -348,8 +348,52 @@ def cmd_analyze(args):
 def cmd_decay(args):
     """Apply decay to memory importance."""
     from cortex_memory.pipeline.consolidate import apply_decay
-    result = apply_decay(args.rate, args.min_importance)
-    console.print(f"[green]✓[/] {result['decayed']} decayed, {result['archived']} archived")
+    result = apply_decay(args.rate, args.min_importance, dry_run=args.dry_run)
+    
+    if args.dry_run:
+        console.print("[yellow]DRY RUN[/] — no changes made\n")
+        
+        if result["protected_count"]:
+            console.print(f"[cyan]Protected ({result['protected_count']})[/] — exempt from decay:")
+            for m in result.get("protected", []):
+                console.print(f"  • {m['content'][:80]}...")
+            console.print()
+        
+        if result["would_decay"]:
+            console.print(f"[green]Would decay ({result['decayed_count']})[/]:")
+            for m in result.get("would_decay", [])[:10]:
+                console.print(f"  • {m['old_importance']:.2f} → {m['new_importance']:.2f} | {m['content'][:60]}...")
+            if result["decayed_count"] > 10:
+                console.print(f"  ... and {result['decayed_count'] - 10} more")
+            console.print()
+        
+        if result["would_archive"]:
+            console.print(f"[red]Would archive ({result['archived_count']})[/]:")
+            for m in result.get("would_archive", []):
+                console.print(f"  • {m['old_importance']:.2f} → {m['new_importance']:.2f} | {m['content'][:60]}...")
+            console.print()
+        
+        if not result["would_decay"] and not result["would_archive"]:
+            console.print("[dim]No memories would be affected[/]")
+    else:
+        console.print(f"[green]✓[/] {result['decayed_count']} decayed, {result['archived_count']} archived, {result['protected_count']} protected")
+
+
+def cmd_protect(args):
+    """Protect or unprotect a memory from decay."""
+    from cortex_memory.db.store import set_memory_protected, get_memory
+    
+    mem = get_memory(args.memory_id)
+    if not mem:
+        console.print(f"[red]Memory {args.memory_id} not found[/]")
+        return
+    
+    set_memory_protected(args.memory_id, not args.remove)
+    
+    if args.remove:
+        console.print(f"[yellow]✓[/] Removed protection from: {mem['content'][:60]}...")
+    else:
+        console.print(f"[green]✓[/] Protected: {mem['content'][:60]}...")
 
 
 def cmd_recent(args):
@@ -420,8 +464,13 @@ Documentation: https://github.com/gfcampbell/cortex-memory
     p.add_argument("--conversation-id", help="Conversation ID to link")
 
     p = sub.add_parser("decay", help="Apply memory decay")
-    p.add_argument("--rate", type=float, default=0.95)
-    p.add_argument("--min-importance", type=float, default=0.1)
+    p.add_argument("--rate", type=float, default=0.95, help="Decay multiplier (default 0.95)")
+    p.add_argument("--min-importance", type=float, default=0.1, help="Archive threshold (default 0.1)")
+    p.add_argument("--dry-run", action="store_true", help="Show what would happen without making changes")
+
+    p = sub.add_parser("protect", help="Protect a memory from decay")
+    p.add_argument("memory_id", help="Memory ID to protect")
+    p.add_argument("--remove", action="store_true", help="Remove protection instead")
 
     p = sub.add_parser("recent", help="Show recent memories")
     p.add_argument("--limit", "-n", type=int, default=10)
@@ -436,7 +485,7 @@ Documentation: https://github.com/gfcampbell/cortex-memory
         "init": cmd_init, "start": cmd_start, "status": cmd_status, "stats": cmd_stats,
         "remember": cmd_remember, "search": cmd_search, "loops": cmd_loops,
         "entities": cmd_entities, "context": cmd_context, "analyze": cmd_analyze,
-        "decay": cmd_decay, "recent": cmd_recent,
+        "decay": cmd_decay, "protect": cmd_protect, "recent": cmd_recent,
     }
     commands[args.command](args)
 

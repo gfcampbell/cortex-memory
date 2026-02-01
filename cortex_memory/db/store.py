@@ -101,6 +101,22 @@ def archive_memory(memory_id, consolidated_into=None):
     conn.close()
 
 
+def set_memory_protected(memory_id, protected=True):
+    """Set or remove decay protection on a memory."""
+    conn = get_db()
+    row = conn.execute("SELECT metadata FROM memories WHERE id = ?", (memory_id,)).fetchone()
+    if row:
+        meta = json.loads(row["metadata"]) if row["metadata"] else {}
+        if protected:
+            meta["protected"] = True
+        else:
+            meta.pop("protected", None)
+        conn.execute("UPDATE memories SET metadata = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", 
+                     (json.dumps(meta), memory_id))
+        conn.commit()
+    conn.close()
+
+
 def delete_memory(memory_id):
     """Permanently delete a memory by ID, including entity mentions."""
     conn = get_db()
