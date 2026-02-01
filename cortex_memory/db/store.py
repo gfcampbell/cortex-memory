@@ -102,8 +102,9 @@ def archive_memory(memory_id, consolidated_into=None):
 
 
 def delete_memory(memory_id):
-    """Permanently delete a memory by ID."""
+    """Permanently delete a memory by ID, including entity mentions."""
     conn = get_db()
+    conn.execute("DELETE FROM entity_mentions WHERE memory_id = ?", (memory_id,))
     conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
     conn.commit()
     conn.close()
@@ -112,6 +113,10 @@ def delete_memory(memory_id):
 def delete_memories_by_content(content_prefix):
     """Delete memories where content starts with a prefix. Useful for cleanup."""
     conn = get_db()
+    # Clean up entity mentions first
+    mem_ids = [r[0] for r in conn.execute("SELECT id FROM memories WHERE content LIKE ?", (f"{content_prefix}%",)).fetchall()]
+    for mid in mem_ids:
+        conn.execute("DELETE FROM entity_mentions WHERE memory_id = ?", (mid,))
     cursor = conn.execute("DELETE FROM memories WHERE content LIKE ?", (f"{content_prefix}%",))
     deleted_count = cursor.rowcount
     conn.commit()
