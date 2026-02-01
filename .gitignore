@@ -8,3 +8,4 @@ seed_entities.yaml
 build/
 dist/
 *.egg
+.DS_Store

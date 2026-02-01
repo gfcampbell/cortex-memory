@@ -257,7 +257,12 @@ def cmd_context(args):
     """Get prepared context for session injection."""
     from cortex_memory.context.prepare import get_prepared_context
 
-    ctx = get_prepared_context(mark_used=not args.peek)
+    try:
+        ctx = get_prepared_context(mark_used=not args.peek, fallback=args.fallback)
+    except RuntimeError as e:
+        console.print(f"[red]✗[/] {e}")
+        console.print("[dim]Run 'cortex analyze' to generate a prepared context, or use --fallback to allow fallback.[/]")
+        raise SystemExit(1)
     console.print(Panel(
         ctx['prompt'],
         title=f"📋 Context (source: {ctx['source']})",
@@ -353,6 +358,7 @@ Documentation: https://github.com/gfcampbell/cortex-memory
 
     p = sub.add_parser("context", help="Get prepared context")
     p.add_argument("--peek", action="store_true", help="Don't mark as used")
+    p.add_argument("--fallback", action="store_true", help="Allow fallback if no prepared context exists")
 
     p = sub.add_parser("analyze", help="Run post-session analysis")
     p.add_argument("--text", help="Conversation text")

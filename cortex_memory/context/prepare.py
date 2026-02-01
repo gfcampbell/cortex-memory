@@ -4,7 +4,7 @@ from cortex_memory.db.store import get_unused_context, mark_context_used, get_op
 from cortex_memory.vector.embeddings import search as vec_search
 
 
-def get_prepared_context(mark_used=True):
+def get_prepared_context(mark_used=True, fallback=False):
     ctx = get_unused_context()
     if ctx:
         if mark_used:
@@ -14,6 +14,8 @@ def get_prepared_context(mark_used=True):
             "source": "prepared",
             "context_id": ctx["id"]
         }
+    if not fallback:
+        raise RuntimeError("No prepared context available. Run 'cortex analyze' to generate one.")
     return build_fallback_context()
 
 

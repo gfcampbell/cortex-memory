@@ -1,7 +1,7 @@
-# Quinn Memory System — Build Plan
+# Cortex Memory — Build Plan
 
 ## What This Is
-A standalone, modular memory system for Quinn. Provides structured memory storage, semantic retrieval, and prepared context injection across sessions. Inspired by Proteus/Vector's memory architecture.
+A standalone, modular memory system for AI assistants. Provides structured memory storage, semantic retrieval, and prepared context injection across sessions.
 
 ## Design Principles
 - **Standalone module** — no modifications to Clawdbot source
@@ -13,9 +13,9 @@ A standalone, modular memory system for Quinn. Provides structured memory storag
 ## Architecture
 
 ```
-clawdbot (untouched)
+host application (untouched)
     ↕ reads/writes via CLI or local HTTP
-quinn-memory/
+cortex-memory/
     ├── service.py          # Local HTTP API (FastAPI or Flask)
     ├── db/
     │   ├── schema.sql      # SQLite structured store
@@ -109,7 +109,7 @@ quinn-memory/
 
 ## Vector Store (ChromaDB)
 
-Single collection: `quinn_memories`
+Single collection: `cortex_memories`
 - Documents: memory content text
 - Metadata: memory_id, memory_type, created_at, importance
 - Embeddings: generated on ingest (ChromaDB default or OpenAI)
@@ -141,13 +141,13 @@ Single collection: `quinn_memories`
 - Apply decay to importance scores
 - Archive or prune low-value memories
 
-## Integration with Clawdbot
+## Integration with Host Application
 
-**Post-session:** Clawdbot's session transcript → quinn-memory ingest endpoint
-**Session start:** quinn-memory prepare endpoint → returns prepared prompt text
-**Both are HTTP calls to localhost — no Clawdbot code changes needed.**
+**Post-session:** Session transcript → cortex-memory ingest endpoint
+**Session start:** cortex-memory prepare endpoint → returns prepared prompt text
+**Both are HTTP calls to localhost — no host application code changes needed.**
 
-Quinn calls these via exec/curl from within Clawdbot sessions, or via cron jobs.
+The AI assistant calls these via exec/curl from within sessions, or via cron jobs.
 
 ## Build Order
 
@@ -186,4 +186,4 @@ Quinn calls these via exec/curl from within Clawdbot sessions, or via cron jobs.
 - Keep config.yaml for all tunable parameters (TTL, decay rates, model choice, etc.)
 - Embedding model: start with ChromaDB's default (all-MiniLM-L6-v2), upgrade later if needed
 - Analysis model: Haiku (cheap, fast, good enough for curation)
-- This is Quinn's brain, not a product. Optimize for Quinn's needs.
+- Optimize for your assistant's specific needs.

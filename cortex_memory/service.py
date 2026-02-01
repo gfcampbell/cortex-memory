@@ -122,8 +122,12 @@ def recent(limit: int = 20):
     return {"memories": recent_memories(limit)}
 
 @app.get("/context")
-def context(peek: bool = False):
-    return get_prepared_context(mark_used=not peek)
+def context(peek: bool = False, fallback: bool = False):
+    try:
+        return get_prepared_context(mark_used=not peek, fallback=fallback)
+    except RuntimeError as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=404, content={"error": str(e)})
 
 @app.post("/ingest")
 def ingest(conv: ConversationIngest):
