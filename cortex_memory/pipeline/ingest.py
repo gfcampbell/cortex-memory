@@ -16,6 +16,18 @@ def ingest_raw_memory(content, memory_type="observation", source=None, importanc
         "importance": importance,
         "source": source or ""
     })
+    # Auto-extract and link entities mentioned in this memory
+    try:
+        from cortex_memory.pipeline.entities import extract_entity_names
+        found = extract_entity_names(content)
+        for name in found:
+            existing = get_entity_by_name(name)
+            if existing:
+                add_entity_mention(existing["id"], mid, content[:200])
+                # Touch last_referenced timestamp
+                update_entity(existing["id"])
+    except Exception:
+        pass  # Entity extraction is best-effort, never block memory storage
     return mid
 
 

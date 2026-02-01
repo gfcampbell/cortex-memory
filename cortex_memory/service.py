@@ -32,11 +32,13 @@ class EntityCreate(BaseModel):
 class SearchQuery(BaseModel):
     query: str
     n_results: int = 5
+    max_distance: Optional[float] = None
 
 class ConversationIngest(BaseModel):
     messages: list
     session_key: Optional[str] = None
     channel: Optional[str] = None
+    auto_analyze: bool = True
 
 class AnalyzeRequest(BaseModel):
     conversation_text: str
@@ -58,6 +60,34 @@ def get_stats():
     s["vector_count"] = vec_count()
     return s
 
+@app.get("/status")
+def get_status():
+    s = stats()
+    vc = vec_count()
+    warnings = []
+    if s['last_analyze'] is None:
+        warnings.append("No analysis has ever been run")
+    if s['last_decay'] is None:
+        warnings.append("Decay has never been run")
+    if s['unused_contexts'] == 0 and s['prepared_contexts'] > 0:
+        warnings.append("No prepared context available for next session")
+    if vc != s['active_memories']:
+        warnings.append(f"Vector/SQLite mismatch: {vc} embeddings vs {s['active_memories']} active memories")
+    return {
+        "status": "healthy" if not warnings else "warnings",
+        "memories_active": s['active_memories'],
+        "memories_archived": s['archived_memories'],
+        "vector_count": vc,
+        "entities": s['entities'],
+        "open_loops": s['active_loops'],
+        "prepared_contexts_unused": s['unused_contexts'],
+        "prepared_contexts_total": s['prepared_contexts'],
+        "last_analyze": s['last_analyze'],
+        "last_decay": s['last_decay'],
+        "memory_types": s.get('memory_types', {}),
+        "warnings": warnings
+    }
+
 @app.post("/memory")
 def create_memory(mem: MemoryCreate):
     mid = ingest_raw_memory(mem.content, mem.memory_type, mem.source, mem.importance, mem.metadata)
@@ -66,10 +96,10 @@ def create_memory(mem: MemoryCreate):
 @app.delete("/memory/{memory_id}")
 def delete_memory_endpoint(memory_id: str):
     """Delete a memory by ID."""
-    mem = get_memory(memory_id)
-    if not mem:
-        raise HTTPException(status_code=404, detail=f"Memory {memory_id} not found")
-    delete_memory(memory_id)
+    try:
+        delete_memory(memory_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     return {"id": memory_id, "status": "deleted"}
 
 @app.delete("/memory/search/{content_prefix}")
@@ -91,7 +121,8 @@ def delete_entity_endpoint(entity_id: str):
 
 @app.post("/search")
 def search(q: SearchQuery):
-    return {"results": vec_search(q.query, q.n_results), "count": len(vec_search(q.query, q.n_results))}
+    results = vec_search(q.query, q.n_results, max_distance=q.max_distance)
+    return {"results": results, "count": len(results)}
 
 @app.get("/loops")
 def loops(limit: int = 10):
@@ -131,7 +162,25 @@ def context(peek: bool = False, fallback: bool = False):
 
 @app.post("/ingest")
 def ingest(conv: ConversationIngest):
-    return ingest_conversation(conv.messages, conv.session_key, conv.channel)
+    result = ingest_conversation(conv.messages, conv.session_key, conv.channel)
+    if conv.auto_analyze and conv.messages:
+        try:
+            # Build conversation text from messages for analysis
+            text = "\n".join(
+                f"{m.get('role', 'unknown')}: {m.get('content', '')}"
+                for m in conv.messages if m.get('content')
+            )
+            analysis = run_analysis(text, result.get("conversation_id"))
+            if analysis and not analysis.get("error"):
+                result["analysis"] = analysis
+                result["auto_analyzed"] = True
+            else:
+                result["auto_analyzed"] = False
+                result["analysis_error"] = analysis.get("error") if analysis else "Analysis returned None"
+        except Exception as e:
+            result["auto_analyzed"] = False
+            result["analysis_error"] = str(e)
+    return result
 
 @app.post("/analyze")
 def analyze(req: AnalyzeRequest):

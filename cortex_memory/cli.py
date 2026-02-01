@@ -166,8 +166,60 @@ def cmd_start(args):
     )
 
 
+def cmd_status(args):
+    """Show system health and status."""
+    from cortex_memory.db.store import stats
+    from cortex_memory.vector.embeddings import count as vec_count
+    import requests
+
+    s = stats()
+    vc = vec_count()
+
+    # Check if service is running
+    try:
+        r = requests.get("http://127.0.0.1:8420/", timeout=2)
+        service_status = "[green]running[/]" if r.status_code == 200 else f"[red]error ({r.status_code})[/]"
+    except Exception:
+        service_status = "[red]not running[/]"
+
+    table = Table(title="🧠 Cortex Memory — Status", border_style="cyan")
+    table.add_column("", style="bold")
+    table.add_column("", justify="right")
+    table.add_row("Service", service_status)
+    table.add_row("Memories (active)", str(s['active_memories']))
+    table.add_row("Memories (archived)", str(s['archived_memories']))
+    table.add_row("Vector Embeddings", str(vc))
+    table.add_row("Entities", str(s['entities']))
+    table.add_row("Open Loops", str(s['active_loops']))
+    table.add_row("Prepared Contexts", f"{s['unused_contexts']} unused / {s['prepared_contexts']} total")
+    table.add_row("Last Analyze", str(s['last_analyze'] or "[yellow]never[/]"))
+    table.add_row("Last Decay", str(s['last_decay'] or "[yellow]never[/]"))
+    console.print(table)
+
+    # Memory type breakdown
+    if s.get('memory_types'):
+        console.print("\n[bold]Memory Types:[/]")
+        for mtype, count in s['memory_types'].items():
+            console.print(f"  {mtype}: {count}")
+
+    # Warnings
+    warnings = []
+    if s['last_analyze'] is None:
+        warnings.append("No analysis has ever been run. Use: cortex analyze --text '...'")
+    if s['last_decay'] is None:
+        warnings.append("Decay has never been run. Use: cortex decay")
+    if s['unused_contexts'] == 0 and s['prepared_contexts'] > 0:
+        warnings.append("No prepared context available for next session. Run: cortex analyze")
+    if vc != s['active_memories']:
+        warnings.append(f"Vector/SQLite mismatch: {vc} embeddings vs {s['active_memories']} active memories")
+    if warnings:
+        console.print()
+        for w in warnings:
+            console.print(f"  [yellow]⚠[/] {w}")
+
+
 def cmd_stats(args):
-    """Show memory system statistics."""
+    """Show memory system statistics (legacy, use 'status' instead)."""
     from cortex_memory.db.store import stats
     from cortex_memory.vector.embeddings import count as vec_count
 
@@ -204,7 +256,7 @@ def cmd_search(args):
     """Semantic search across memories."""
     from cortex_memory.vector.embeddings import search as vec_search
 
-    results = vec_search(args.query, n_results=args.limit)
+    results = vec_search(args.query, n_results=args.limit, max_distance=args.max_distance)
     if not results:
         console.print("[dim]No memories found.[/]")
         return
@@ -337,6 +389,7 @@ Documentation: https://github.com/gfcampbell/cortex-memory
 
     sub.add_parser("init", help="Interactive setup wizard")
     sub.add_parser("start", help="Start the HTTP service")
+    sub.add_parser("status", help="Show system health and status")
     sub.add_parser("stats", help="Show memory statistics")
 
     p = sub.add_parser("remember", help="Store a new memory")
@@ -349,6 +402,7 @@ Documentation: https://github.com/gfcampbell/cortex-memory
     p = sub.add_parser("search", help="Semantic search")
     p.add_argument("query", help="Search query")
     p.add_argument("--limit", "-n", type=int, default=5)
+    p.add_argument("--max-distance", "-d", type=float, default=None, help="Filter out results above this distance (e.g. 0.5)")
 
     p = sub.add_parser("loops", help="Show open loops")
     p.add_argument("--limit", "-n", type=int, default=10)
@@ -379,7 +433,7 @@ Documentation: https://github.com/gfcampbell/cortex-memory
         return
 
     commands = {
-        "init": cmd_init, "start": cmd_start, "stats": cmd_stats,
+        "init": cmd_init, "start": cmd_start, "status": cmd_status, "stats": cmd_stats,
         "remember": cmd_remember, "search": cmd_search, "loops": cmd_loops,
         "entities": cmd_entities, "context": cmd_context, "analyze": cmd_analyze,
         "decay": cmd_decay, "recent": cmd_recent,

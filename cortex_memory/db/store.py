@@ -146,6 +146,9 @@ def update_entity(entity_id, summary=None, metadata=None):
         conn.execute("UPDATE entities SET summary = ?, last_referenced = CURRENT_TIMESTAMP WHERE id = ?", (summary, entity_id))
     if metadata is not None:
         conn.execute("UPDATE entities SET metadata = ?, last_referenced = CURRENT_TIMESTAMP WHERE id = ?", (json.dumps(metadata), entity_id))
+    if summary is None and metadata is None:
+        # Just touch the timestamp
+        conn.execute("UPDATE entities SET last_referenced = CURRENT_TIMESTAMP WHERE id = ?", (entity_id,))
     conn.commit()
     conn.close()
 
@@ -293,5 +296,21 @@ def stats():
         result[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
     result['active_loops'] = conn.execute("SELECT COUNT(*) FROM open_loops WHERE resolved_at IS NULL").fetchone()[0]
     result['active_memories'] = conn.execute("SELECT COUNT(*) FROM memories WHERE archived = 0").fetchone()[0]
+    result['archived_memories'] = result['memories'] - result['active_memories']
+    # Last analyze time
+    row = conn.execute("SELECT MAX(created_at) FROM prepared_contexts").fetchone()
+    result['last_analyze'] = row[0] if row and row[0] else None
+    # Last decay (approximated by last archived memory)
+    row = conn.execute("SELECT MAX(updated_at) FROM memories WHERE archived = 1").fetchone()
+    result['last_decay'] = row[0] if row and row[0] else None
+    # Unused prepared contexts
+    result['unused_contexts'] = conn.execute(
+        "SELECT COUNT(*) FROM prepared_contexts WHERE used_at IS NULL AND expires_at > datetime('now')"
+    ).fetchone()[0]
+    # Memory type breakdown
+    rows = conn.execute(
+        "SELECT memory_type, COUNT(*) FROM memories WHERE archived = 0 GROUP BY memory_type ORDER BY COUNT(*) DESC"
+    ).fetchall()
+    result['memory_types'] = {row[0]: row[1] for row in rows}
     conn.close()
     return result

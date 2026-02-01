@@ -38,7 +38,7 @@ def add_memory(memory_id, content, metadata=None):
     )
 
 
-def search(query, n_results=10, where=None):
+def search(query, n_results=10, where=None, max_distance=None):
     collection = get_collection()
     if collection.count() == 0:
         return []
@@ -51,10 +51,14 @@ def search(query, n_results=10, where=None):
     results = collection.query(**kwargs)
     memories = []
     for i in range(len(results["ids"][0])):
+        distance = results["distances"][0][i] if results.get("distances") else None
+        # Filter out low-relevance results
+        if max_distance is not None and distance is not None and distance > max_distance:
+            continue
         memories.append({
             "id": results["ids"][0][i],
             "content": results["documents"][0][i],
-            "distance": results["distances"][0][i] if results.get("distances") else None,
+            "distance": distance,
             "metadata": results["metadatas"][0][i] if results.get("metadatas") else {}
         })
     return memories
